@@ -1,0 +1,16 @@
+[
+    {
+        "id": 1,
+        "nome": "Administrador",
+        "email": "admin@taskflow.com",
+        "senha": "admin",
+        "perfil": "ADMIN"
+    },
+    {
+        "id": 2,
+        "nome": "Ana",
+        "email": "ana@gmail.com",
+        "senha": "1234",
+        "perfil": "MEMBRO"
+    }
+]
