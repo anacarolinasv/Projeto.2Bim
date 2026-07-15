@@ -1,16 +1,8 @@
-"""Entidade Equipe (modelo) e EquipeDAO (persistencia)."""
-
 import json
 import os
 
-
-# ======================================================================
-# MODELO
 # ======================================================================
 class Equipe:
-    """Equipe de trabalho. Relacionamento 1 -> N: possui varios Projetos.
-    Associacao N -> 1: tem um Usuario como lider (lider_id)."""
-
     def __init__(self, id=0, nome="", descricao="", lider_id=0):
         self._id = id
         self._nome = nome

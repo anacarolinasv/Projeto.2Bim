@@ -1,0 +1,22 @@
+[
+    {
+        "id": 1,
+        "nome": "Bug",
+        "cor": "#EF4444"
+    },
+    {
+        "id": 2,
+        "nome": "Feature",
+        "cor": "#7C3AED"
+    },
+    {
+        "id": 3,
+        "nome": "Melhoria",
+        "cor": "#22C55E"
+    },
+    {
+        "id": 4,
+        "nome": "Documentação",
+        "cor": "#F59E0B"
+    }
+]

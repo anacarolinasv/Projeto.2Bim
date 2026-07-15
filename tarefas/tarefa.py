@@ -1,5 +1,3 @@
-"""Entidade Tarefa (modelo) e TarefaDAO (persistencia)."""
-
 import json
 import os
 from enum import Enum
@@ -20,18 +18,10 @@ class Prioridade(Enum):
     MEDIA = "MEDIA"
     ALTA = "ALTA"
 
-
-# ======================================================================
-# MODELO
-# ======================================================================
 class Tarefa:
-    """Tarefa. Relacionamento 1 -> N: possui varios Comentarios.
-    Associacoes N -> 1: Projeto (projeto_id), Usuario responsavel
-    (responsavel_id) e Categoria (categoria_id)."""
-
     def __init__(self, id=0, titulo="", descricao="", status=StatusTarefa.A_FAZER,
                  prioridade=Prioridade.MEDIA, data_criacao="", prazo="",
-                 projeto_id=0, responsavel_id=0, categoria_id=0):
+                 sprint_id=0, responsavel_id=0, categoria_id=0):
         self._id = id
         self._titulo = titulo
         self._descricao = descricao
@@ -39,7 +29,7 @@ class Tarefa:
         self._prioridade = prioridade
         self._data_criacao = data_criacao
         self._prazo = prazo
-        self._projeto_id = projeto_id
+        self._sprint_id = sprint_id
         self._responsavel_id = responsavel_id
         self._categoria_id = categoria_id
 
@@ -87,11 +77,11 @@ class Tarefa:
     def set_prazo(self, valor):
         self._prazo = valor
 
-    def get_projeto_id(self):
-        return self._projeto_id
+    def get_sprint_id(self):
+        return self._sprint_id
 
-    def set_projeto_id(self, valor):
-        self._projeto_id = valor
+    def set_sprint_id(self, valor):
+        self._sprint_id = valor
 
     def get_responsavel_id(self):
         return self._responsavel_id
@@ -117,7 +107,7 @@ class Tarefa:
             "prioridade": self._prioridade.value,
             "data_criacao": self._data_criacao,
             "prazo": self._prazo,
-            "projeto_id": self._projeto_id,
+            "sprint_id": self._sprint_id,
             "responsavel_id": self._responsavel_id,
             "categoria_id": self._categoria_id,
         }
@@ -127,7 +117,7 @@ class Tarefa:
         return Tarefa(
             dic["id"], dic["titulo"], dic["descricao"],
             StatusTarefa(dic["status"]), Prioridade(dic["prioridade"]),
-            dic["data_criacao"], dic["prazo"], dic["projeto_id"],
+            dic["data_criacao"], dic["prazo"], dic["sprint_id"],
             dic["responsavel_id"], dic["categoria_id"],
         )
 
@@ -208,8 +198,8 @@ class TarefaDAO:
         return [o for o in TarefaDAO.Listar() if termo in o.get_titulo().lower()]
 
     @staticmethod
-    def Listar_Por_Projeto(projeto_id):
-        return [o for o in TarefaDAO.Listar() if o.get_projeto_id() == projeto_id]
+    def Listar_Por_Sprint(sprint_id):
+        return [o for o in TarefaDAO.Listar() if o.get_sprint_id() == sprint_id]
 
     @staticmethod
     def Listar_Por_Responsavel(responsavel_id):

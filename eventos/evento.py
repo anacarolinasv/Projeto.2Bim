@@ -1,16 +1,7 @@
-"""Entidade Evento (modelo) e EventoDAO (persistencia)."""
-
 import json
 import os
 
-
-# ======================================================================
-# MODELO
-# ======================================================================
 class Evento:
-    """Evento de calendario. Associacoes N -> 1: Usuario dono (usuario_id)
-    e Tarefa opcional (tarefa_id; 0 = sem vinculo)."""
-
     def __init__(self, id=0, titulo="", descricao="", data_inicio="",
                  data_fim="", usuario_id=0, tarefa_id=0):
         self._id = id

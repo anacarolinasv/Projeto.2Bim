@@ -1,0 +1,11 @@
+[
+    {
+        "id": 1,
+        "nome": "PEOO",
+        "descricao": "TRABALHO",
+        "data_inicio": "12234",
+        "data_fim": "2345345",
+        "status": "ATIVO",
+        "equipe_id": 0
+    }
+]

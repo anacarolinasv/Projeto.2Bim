@@ -1,16 +1,7 @@
-"""Entidade Comentario (modelo) e ComentarioDAO (persistencia)."""
-
 import json
 import os
 
-
-# ======================================================================
-# MODELO
-# ======================================================================
 class Comentario:
-    """Comentario de uma Tarefa. Associacoes N -> 1: Tarefa (tarefa_id)
-    e Usuario autor (autor_id)."""
-
     def __init__(self, id=0, texto="", data_criacao="", tarefa_id=0, autor_id=0):
         self._id = id
         self._texto = texto

@@ -1,15 +1,7 @@
-"""Entidade Categoria (modelo) e CategoriaDAO (persistencia)."""
-
 import json
 import os
 
-
-# ======================================================================
-# MODELO
-# ======================================================================
 class Categoria:
-    """Categoria (etiqueta). Relacionamento 1 -> N: classifica varias Tarefas."""
-
     def __init__(self, id=0, nome="", cor="#CCCCCC"):
         self._id = id
         self._nome = nome

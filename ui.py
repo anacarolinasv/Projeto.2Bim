@@ -15,17 +15,11 @@ from view.view import View
 from usuarios.usuario import Perfil
 from projetos.projeto import StatusProjeto
 from tarefas.tarefa import StatusTarefa, Prioridade
-from cores import C
 
 
 class UI:
     # Usuario autenticado na sessao atual
     usuario_logado = None
-
-    @staticmethod
-    def _listar(itens):
-        for item in itens:
-            print(C.item(item))
 
     # ------------------------------------------------------------------
     # Ponto de entrada
@@ -33,14 +27,21 @@ class UI:
     @staticmethod
     def Main():
         if View.Garantir_Admin_Inicial():
-            print(C.aviso("Usuario admin inicial criado (admin@taskflow.com / admin)"))
-        if not UI.Tela_Acesso():
-            print(C.info("Encerrando."))
-            return
+            print(">> Usuario admin inicial criado (admin@taskflow.com / admin)")
+        while True:
+            if not UI.Tela_Acesso():
+                print("Aplicacao finalizada.")
+                break
+            UI.Sessao()
+
+    @staticmethod
+    def Sessao():
+        """Laco principal enquanto ha um usuario logado (ate o logout)."""
         while True:
             op = UI.Menu_Principal()
             if op == 0:
-                print(C.info("Aplicacao finalizada."))
+                print(f"Logout de {UI.usuario_logado.get_nome()}. Ate logo!")
+                UI.usuario_logado = None
                 break
             perfil = UI.usuario_logado.get_perfil()
             if perfil == Perfil.ADMIN and op == 1:
@@ -51,6 +52,8 @@ class UI:
                 UI.Menu_Projeto()
             elif perfil == Perfil.ADMIN and op == 4:
                 UI.Menu_Categoria()
+            elif perfil == Perfil.ADMIN and op == 8:
+                UI.Menu_Sprint()
             elif op == 5:
                 UI.Menu_Tarefa()
             elif op == 6:
@@ -58,7 +61,7 @@ class UI:
             elif op == 7:
                 UI.Menu_Evento()
             else:
-                print(C.erro("Opcao invalida."))
+                print("Opcao invalida.")
 
     # ------------------------------------------------------------------
     # Autenticacao
@@ -67,10 +70,10 @@ class UI:
     def Tela_Acesso():
         """Menu inicial: entrar ou criar uma nova conta."""
         while True:
-            print(C.banner())
-            print(C.opcao(1, "Entrar"))
-            print(C.opcao(2, "Criar conta"))
-            print(C.opcao_sair("Sair"))
+            print("\n====== TaskFlow ======")
+            print("1 - Entrar")
+            print("2 - Criar conta")
+            print("0 - Sair")
             op = UI.Ler_Opcao()
             if op == 0:
                 return False
@@ -80,35 +83,33 @@ class UI:
             elif op == 2:
                 UI.Criar_Conta()
             else:
-                print(C.erro("Opcao invalida."))
+                print("Opcao invalida.")
 
     @staticmethod
     def Login():
-        print(C.menu_titulo("LOGIN"))
-        email = input(C.prompt("E-mail: ")).strip()
-        senha = input(C.prompt("Senha: ")).strip()
+        print("\n=== LOGIN ===")
+        email = input("E-mail: ").strip()
+        senha = input("Senha: ").strip()
         usuario = View.Usuario_Login(email, senha)
         if usuario:
             UI.usuario_logado = usuario
-            print(C.destaque(
-                f"\nBem-vindo(a), {usuario.get_nome()}! Perfil: {usuario.get_perfil().value}"
-            ))
+            print(f"\nBem-vindo(a), {usuario.get_nome()}! Perfil: {usuario.get_perfil().value}")
             return True
-        print(C.erro("E-mail ou senha invalidos."))
+        print("E-mail ou senha invalidos.")
         return False
 
     @staticmethod
     def Criar_Conta():
         try:
-            print(C.menu_titulo("CRIAR CONTA"))
-            nome = input(C.prompt("Nome: "))
-            email = input(C.prompt("E-mail: ")).strip()
-            senha = input(C.prompt("Senha (min. 4 caracteres): "))
+            print("\n=== CRIAR CONTA ===")
+            nome = input("Nome: ")
+            email = input("E-mail: ").strip()
+            senha = input("Senha (min. 4 caracteres): ")
             perfil = UI.Ler_Enum("Perfil", Perfil, Perfil.MEMBRO)
             novo = View.Usuario_Inserir(nome, email, senha, perfil)
-            print(C.sucesso(f"Conta criada com sucesso (id={novo.get_id()})! Agora e so entrar."))
+            print(f"Conta criada com sucesso (id={novo.get_id()})! Agora e so entrar.")
         except Exception as e:
-            print(C.erro(f"Nao foi possivel criar a conta: {e}"))
+            print(f"Nao foi possivel criar a conta: {e}")
 
     # ------------------------------------------------------------------
     # Utilitarios de leitura
@@ -116,13 +117,13 @@ class UI:
     @staticmethod
     def Ler_Opcao():
         try:
-            return int(input(C.prompt("Escolha: ")))
+            return int(input("Escolha: "))
         except ValueError:
             return -1
 
     @staticmethod
     def Ler_Int(rotulo, padrao=None):
-        texto = input(C.prompt(rotulo)).strip()
+        texto = input(rotulo).strip()
         if not texto and padrao is not None:
             return padrao
         try:
@@ -133,17 +134,17 @@ class UI:
     @staticmethod
     def Ler_Enum(rotulo, classe_enum, padrao=None):
         opcoes = list(classe_enum)
-        print(C.wrap(f"{rotulo}:", C.YELLOW, C.BOLD))
+        print(f"{rotulo}:")
         for i, e in enumerate(opcoes, 1):
-            print(f"  {C.opcao(i, e.value)}")
+            print(f"  {i} - {e.value}")
         sufixo = f" [{padrao.value}]" if padrao else ""
-        escolha = input(C.prompt(f"Numero{sufixo}: ")).strip()
+        escolha = input(f"Numero{sufixo}: ").strip()
         if not escolha and padrao:
             return padrao
         try:
             return opcoes[int(escolha) - 1]
         except (ValueError, IndexError):
-            print(C.aviso("Opcao invalida, usando padrao."))
+            print("Opcao invalida, usando padrao.")
             return padrao or opcoes[0]
 
     # ------------------------------------------------------------------
@@ -151,17 +152,17 @@ class UI:
     # ------------------------------------------------------------------
     @staticmethod
     def Menu_Principal():
-        perfil = UI.usuario_logado.get_perfil().value
-        print(C.menu_titulo(f"MENU PRINCIPAL ({perfil})"))
+        print(f"\n=== MENU PRINCIPAL ({UI.usuario_logado.get_perfil().value}) ===")
         if UI.usuario_logado.get_perfil() == Perfil.ADMIN:
-            print(C.opcao(1, "Menu Usuario"))
-            print(C.opcao(2, "Menu Equipe"))
-            print(C.opcao(3, "Menu Projeto"))
-            print(C.opcao(4, "Menu Categoria"))
-        print(C.opcao(5, "Menu Tarefa"))
-        print(C.opcao(6, "Menu Comentario"))
-        print(C.opcao(7, "Menu Evento"))
-        print(C.opcao_sair("Sair"))
+            print("1 - Menu Usuario")
+            print("2 - Menu Equipe")
+            print("3 - Menu Projeto")
+            print("4 - Menu Categoria")
+            print("8 - Menu Sprint")
+        print("5 - Menu Tarefa")
+        print("6 - Menu Comentario")
+        print("7 - Menu Evento")
+        print("0 - Sair (logout)")
         return UI.Ler_Opcao()
 
     # ==================================================================
@@ -170,10 +171,9 @@ class UI:
     @staticmethod
     def Menu_Usuario():
         while True:
-            print(C.menu_titulo("MENU USUARIO"))
-            print(C.opcoes((1, "Listar"), (2, "Inserir"), (3, "Atualizar")))
-            print(C.opcoes((4, "Excluir"), (5, "Pesquisar por nome")))
-            print(C.opcao_sair("Voltar"))
+            print("\n=== MENU USUARIO ===")
+            print("1 - Listar   2 - Inserir   3 - Atualizar")
+            print("4 - Excluir  5 - Pesquisar por nome   0 - Voltar")
             op = UI.Ler_Opcao()
             if op == 0:
                 break
@@ -188,27 +188,28 @@ class UI:
             elif op == 5:
                 UI.Usuario_Pesquisar()
             else:
-                print(C.erro("Opcao invalida."))
+                print("Opcao invalida.")
 
     @staticmethod
     def Usuario_Listar():
         lista = View.Usuario_Listar()
         if not lista:
-            print(C.info("Nenhum usuario cadastrado."))
+            print("Nenhum usuario cadastrado.")
             return
-        UI._listar(lista)
+        for u in lista:
+            print(u)
 
     @staticmethod
     def Usuario_Inserir():
         try:
-            nome = input(C.prompt("Nome: "))
-            email = input(C.prompt("Email: "))
-            senha = input(C.prompt("Senha: "))
+            nome = input("Nome: ")
+            email = input("Email: ")
+            senha = input("Senha: ")
             perfil = UI.Ler_Enum("Perfil", Perfil, Perfil.MEMBRO)
             u = View.Usuario_Inserir(nome, email, senha, perfil)
-            print(C.sucesso(f"Usuario inserido (id={u.get_id()})."))
+            print(f"Usuario inserido (id={u.get_id()}).")
         except Exception as e:
-            print(C.erro(f"Erro ao inserir usuario: {e}"))
+            print(f"Erro ao inserir usuario: {e}")
 
     @staticmethod
     def Usuario_Atualizar():
@@ -216,36 +217,31 @@ class UI:
             id_ = UI.Ler_Int("Id do usuario para atualizar: ")
             atual = View.Usuario_Listar_Id(id_)
             if atual is None:
-                print(C.erro("Usuario nao encontrado."))
+                print("Usuario nao encontrado.")
                 return
-            nome = input(C.prompt(f"Nome [{atual.get_nome()}]: ")).strip() or atual.get_nome()
-            email = input(C.prompt(f"Email [{atual.get_email()}]: ")).strip() or atual.get_email()
+            nome = input(f"Nome [{atual.get_nome()}]: ").strip() or atual.get_nome()
+            email = input(f"Email [{atual.get_email()}]: ").strip() or atual.get_email()
             perfil = UI.Ler_Enum("Perfil", Perfil, atual.get_perfil())
-            if View.Usuario_Atualizar(id_, nome, email, perfil):
-                print(C.sucesso("Usuario atualizado."))
-            else:
-                print(C.erro("Falhou."))
+            print("Usuario atualizado." if View.Usuario_Atualizar(id_, nome, email, perfil) else "Falhou.")
         except Exception as e:
-            print(C.erro(f"Erro ao atualizar usuario: {e}"))
+            print(f"Erro ao atualizar usuario: {e}")
 
     @staticmethod
     def Usuario_Excluir():
         try:
             id_ = UI.Ler_Int("Id do usuario para excluir: ")
-            if View.Usuario_Excluir(id_):
-                print(C.sucesso("Usuario excluido."))
-            else:
-                print(C.erro("Usuario nao encontrado."))
+            print("Usuario excluido." if View.Usuario_Excluir(id_) else "Usuario nao encontrado.")
         except Exception as e:
-            print(C.erro(f"Erro ao excluir usuario: {e}"))
+            print(f"Erro ao excluir usuario: {e}")
 
     @staticmethod
     def Usuario_Pesquisar():
-        resultado = View.Usuario_Pesquisar_Nome(input(C.prompt("Parte do nome: ")))
+        resultado = View.Usuario_Pesquisar_Nome(input("Parte do nome: "))
         if not resultado:
-            print(C.info("Nada encontrado."))
+            print("Nada encontrado.")
             return
-        UI._listar(resultado)
+        for u in resultado:
+            print(u)
 
     # ==================================================================
     # EQUIPE  (somente ADMIN)
@@ -253,10 +249,9 @@ class UI:
     @staticmethod
     def Menu_Equipe():
         while True:
-            print(C.menu_titulo("MENU EQUIPE"))
-            print(C.opcoes((1, "Listar"), (2, "Inserir"), (3, "Atualizar")))
-            print(C.opcoes((4, "Excluir"), (5, "Pesquisar por nome")))
-            print(C.opcao_sair("Voltar"))
+            print("\n=== MENU EQUIPE ===")
+            print("1 - Listar   2 - Inserir   3 - Atualizar   4 - Excluir")
+            print("5 - Pesquisar por nome   6 - Gerenciar membros   0 - Voltar")
             op = UI.Ler_Opcao()
             if op == 0:
                 break
@@ -270,29 +265,53 @@ class UI:
                 UI.Equipe_Excluir()
             elif op == 5:
                 UI.Equipe_Pesquisar()
+            elif op == 6:
+                UI.Equipe_Membros()
             else:
-                print(C.erro("Opcao invalida."))
+                print("Opcao invalida.")
+
+    @staticmethod
+    def Equipe_Membros():
+        eq_id = UI.Ler_Int("Id da equipe: ")
+        equipe = View.Equipe_Listar_Id(eq_id)
+        if equipe is None:
+            print("Equipe nao encontrada.")
+            return
+        print(f"-- Membros de '{equipe.get_nome()}' --")
+        for m in View.Equipe_Membros(eq_id):
+            print(f"   {m}")
+        print("1 - Adicionar membro   2 - Remover membro   0 - Voltar")
+        op = UI.Ler_Opcao()
+        if op == 1:
+            print("-- Usuarios --")
+            UI.Usuario_Listar()
+            uid = UI.Ler_Int("Id do usuario para adicionar: ")
+            print("Membro adicionado." if View.Equipe_Adicionar_Membro(eq_id, uid) else "Falhou.")
+        elif op == 2:
+            uid = UI.Ler_Int("Id do usuario para remover: ")
+            print("Membro removido." if View.Equipe_Remover_Membro(uid) else "Falhou.")
 
     @staticmethod
     def Equipe_Listar():
         lista = View.Equipe_Listar()
         if not lista:
-            print(C.info("Nenhuma equipe cadastrada."))
+            print("Nenhuma equipe cadastrada.")
             return
-        UI._listar(lista)
+        for e in lista:
+            print(e)
 
     @staticmethod
     def Equipe_Inserir():
         try:
-            nome = input(C.prompt("Nome: "))
-            descricao = input(C.prompt("Descricao: "))
-            print(C.secao("Usuarios disponiveis para liderar"))
+            nome = input("Nome: ")
+            descricao = input("Descricao: ")
+            print("-- Usuarios disponiveis para liderar --")
             UI.Usuario_Listar()
             lider_id = UI.Ler_Int("Id do lider (0 = nenhum): ", 0)
             e = View.Equipe_Inserir(nome, descricao, lider_id)
-            print(C.sucesso(f"Equipe inserida (id={e.get_id()})."))
+            print(f"Equipe inserida (id={e.get_id()}).")
         except Exception as ex:
-            print(C.erro(f"Erro ao inserir equipe: {ex}"))
+            print(f"Erro ao inserir equipe: {ex}")
 
     @staticmethod
     def Equipe_Atualizar():
@@ -300,36 +319,31 @@ class UI:
             id_ = UI.Ler_Int("Id da equipe para atualizar: ")
             atual = View.Equipe_Listar_Id(id_)
             if atual is None:
-                print(C.erro("Equipe nao encontrada."))
+                print("Equipe nao encontrada.")
                 return
-            nome = input(C.prompt(f"Nome [{atual.get_nome()}]: ")).strip() or atual.get_nome()
-            descricao = input(C.prompt(f"Descricao [{atual.get_descricao()}]: ")).strip() or atual.get_descricao()
+            nome = input(f"Nome [{atual.get_nome()}]: ").strip() or atual.get_nome()
+            descricao = input(f"Descricao [{atual.get_descricao()}]: ").strip() or atual.get_descricao()
             lider_id = UI.Ler_Int(f"Id do lider [{atual.get_lider_id()}]: ", atual.get_lider_id())
-            if View.Equipe_Atualizar(id_, nome, descricao, lider_id):
-                print(C.sucesso("Equipe atualizada."))
-            else:
-                print(C.erro("Falhou."))
+            print("Equipe atualizada." if View.Equipe_Atualizar(id_, nome, descricao, lider_id) else "Falhou.")
         except Exception as ex:
-            print(C.erro(f"Erro ao atualizar equipe: {ex}"))
+            print(f"Erro ao atualizar equipe: {ex}")
 
     @staticmethod
     def Equipe_Excluir():
         try:
             id_ = UI.Ler_Int("Id da equipe para excluir: ")
-            if View.Equipe_Excluir(id_):
-                print(C.sucesso("Equipe excluida."))
-            else:
-                print(C.erro("Equipe nao encontrada."))
+            print("Equipe excluida." if View.Equipe_Excluir(id_) else "Equipe nao encontrada.")
         except Exception as ex:
-            print(C.erro(f"Erro ao excluir equipe: {ex}"))
+            print(f"Erro ao excluir equipe: {ex}")
 
     @staticmethod
     def Equipe_Pesquisar():
-        resultado = View.Equipe_Pesquisar_Nome(input(C.prompt("Parte do nome: ")))
+        resultado = View.Equipe_Pesquisar_Nome(input("Parte do nome: "))
         if not resultado:
-            print(C.info("Nada encontrado."))
+            print("Nada encontrado.")
             return
-        UI._listar(resultado)
+        for e in resultado:
+            print(e)
 
     # ==================================================================
     # PROJETO  (somente ADMIN)
@@ -337,10 +351,9 @@ class UI:
     @staticmethod
     def Menu_Projeto():
         while True:
-            print(C.menu_titulo("MENU PROJETO"))
-            print(C.opcoes((1, "Listar"), (2, "Inserir"), (3, "Atualizar"), (4, "Excluir")))
-            print(C.opcoes((5, "Pesquisar por nome"), (6, "Listar por equipe")))
-            print(C.opcao_sair("Voltar"))
+            print("\n=== MENU PROJETO ===")
+            print("1 - Listar   2 - Inserir   3 - Atualizar   4 - Excluir")
+            print("5 - Pesquisar por nome   6 - Listar por equipe   0 - Voltar")
             op = UI.Ler_Opcao()
             if op == 0:
                 break
@@ -357,31 +370,32 @@ class UI:
             elif op == 6:
                 UI.Projeto_Por_Equipe()
             else:
-                print(C.erro("Opcao invalida."))
+                print("Opcao invalida.")
 
     @staticmethod
     def Projeto_Listar():
         lista = View.Projeto_Listar()
         if not lista:
-            print(C.info("Nenhum projeto cadastrado."))
+            print("Nenhum projeto cadastrado.")
             return
-        UI._listar(lista)
+        for p in lista:
+            print(p)
 
     @staticmethod
     def Projeto_Inserir():
         try:
-            nome = input(C.prompt("Nome: "))
-            descricao = input(C.prompt("Descricao: "))
-            data_inicio = input(C.prompt("Data inicio (AAAA-MM-DD): "))
-            data_fim = input(C.prompt("Data fim (AAAA-MM-DD): "))
+            nome = input("Nome: ")
+            descricao = input("Descricao: ")
+            data_inicio = input("Data inicio (AAAA-MM-DD): ")
+            data_fim = input("Data fim (AAAA-MM-DD): ")
             status = UI.Ler_Enum("Status", StatusProjeto, StatusProjeto.ATIVO)
-            print(C.secao("Equipes disponiveis"))
+            print("-- Equipes disponiveis --")
             UI.Equipe_Listar()
             equipe_id = UI.Ler_Int("Id da equipe: ", 0)
             p = View.Projeto_Inserir(nome, descricao, data_inicio, data_fim, status, equipe_id)
-            print(C.sucesso(f"Projeto inserido (id={p.get_id()})."))
+            print(f"Projeto inserido (id={p.get_id()}).")
         except Exception as e:
-            print(C.erro(f"Erro ao inserir projeto: {e}"))
+            print(f"Erro ao inserir projeto: {e}")
 
     @staticmethod
     def Projeto_Atualizar():
@@ -389,46 +403,42 @@ class UI:
             id_ = UI.Ler_Int("Id do projeto para atualizar: ")
             atual = View.Projeto_Listar_Id(id_)
             if atual is None:
-                print(C.erro("Projeto nao encontrado."))
+                print("Projeto nao encontrado.")
                 return
-            nome = input(C.prompt(f"Nome [{atual.get_nome()}]: ")).strip() or atual.get_nome()
-            descricao = input(C.prompt(f"Descricao [{atual.get_descricao()}]: ")).strip() or atual.get_descricao()
+            nome = input(f"Nome [{atual.get_nome()}]: ").strip() or atual.get_nome()
+            descricao = input(f"Descricao [{atual.get_descricao()}]: ").strip() or atual.get_descricao()
             status = UI.Ler_Enum("Status", StatusProjeto, atual.get_status())
             equipe_id = UI.Ler_Int(f"Id equipe [{atual.get_equipe_id()}]: ", atual.get_equipe_id())
-            if View.Projeto_Atualizar(id_, nome, descricao, status, equipe_id):
-                print(C.sucesso("Projeto atualizado."))
-            else:
-                print(C.erro("Falhou."))
+            print("Projeto atualizado." if View.Projeto_Atualizar(id_, nome, descricao, status, equipe_id) else "Falhou.")
         except Exception as e:
-            print(C.erro(f"Erro ao atualizar projeto: {e}"))
+            print(f"Erro ao atualizar projeto: {e}")
 
     @staticmethod
     def Projeto_Excluir():
         try:
             id_ = UI.Ler_Int("Id do projeto para excluir: ")
-            if View.Projeto_Excluir(id_):
-                print(C.sucesso("Projeto excluido."))
-            else:
-                print(C.erro("Projeto nao encontrado."))
+            print("Projeto excluido." if View.Projeto_Excluir(id_) else "Projeto nao encontrado.")
         except Exception as e:
-            print(C.erro(f"Erro ao excluir projeto: {e}"))
+            print(f"Erro ao excluir projeto: {e}")
 
     @staticmethod
     def Projeto_Pesquisar():
-        resultado = View.Projeto_Pesquisar_Nome(input(C.prompt("Parte do nome: ")))
+        resultado = View.Projeto_Pesquisar_Nome(input("Parte do nome: "))
         if not resultado:
-            print(C.info("Nada encontrado."))
+            print("Nada encontrado.")
             return
-        UI._listar(resultado)
+        for p in resultado:
+            print(p)
 
     @staticmethod
     def Projeto_Por_Equipe():
         equipe_id = UI.Ler_Int("Id da equipe: ")
         resultado = View.Projeto_Listar_Por_Equipe(equipe_id)
         if not resultado:
-            print(C.info("Nenhum projeto para essa equipe."))
+            print("Nenhum projeto para essa equipe.")
             return
-        UI._listar(resultado)
+        for p in resultado:
+            print(p)
 
     # ==================================================================
     # CATEGORIA  (somente ADMIN)
@@ -436,10 +446,9 @@ class UI:
     @staticmethod
     def Menu_Categoria():
         while True:
-            print(C.menu_titulo("MENU CATEGORIA"))
-            print(C.opcoes((1, "Listar"), (2, "Inserir"), (3, "Atualizar")))
-            print(C.opcoes((4, "Excluir"), (5, "Pesquisar por nome")))
-            print(C.opcao_sair("Voltar"))
+            print("\n=== MENU CATEGORIA ===")
+            print("1 - Listar   2 - Inserir   3 - Atualizar")
+            print("4 - Excluir  5 - Pesquisar por nome   0 - Voltar")
             op = UI.Ler_Opcao()
             if op == 0:
                 break
@@ -454,25 +463,26 @@ class UI:
             elif op == 5:
                 UI.Categoria_Pesquisar()
             else:
-                print(C.erro("Opcao invalida."))
+                print("Opcao invalida.")
 
     @staticmethod
     def Categoria_Listar():
         lista = View.Categoria_Listar()
         if not lista:
-            print(C.info("Nenhuma categoria cadastrada."))
+            print("Nenhuma categoria cadastrada.")
             return
-        UI._listar(lista)
+        for c in lista:
+            print(c)
 
     @staticmethod
     def Categoria_Inserir():
         try:
-            nome = input(C.prompt("Nome: "))
-            cor = input(C.prompt("Cor (ex: #E53935): ")) or "#CCCCCC"
+            nome = input("Nome: ")
+            cor = input("Cor (ex: #E53935): ") or "#CCCCCC"
             c = View.Categoria_Inserir(nome, cor)
-            print(C.sucesso(f"Categoria inserida (id={c.get_id()})."))
+            print(f"Categoria inserida (id={c.get_id()}).")
         except Exception as e:
-            print(C.erro(f"Erro ao inserir categoria: {e}"))
+            print(f"Erro ao inserir categoria: {e}")
 
     @staticmethod
     def Categoria_Atualizar():
@@ -480,35 +490,113 @@ class UI:
             id_ = UI.Ler_Int("Id da categoria para atualizar: ")
             atual = View.Categoria_Listar_Id(id_)
             if atual is None:
-                print(C.erro("Categoria nao encontrada."))
+                print("Categoria nao encontrada.")
                 return
-            nome = input(C.prompt(f"Nome [{atual.get_nome()}]: ")).strip() or atual.get_nome()
-            cor = input(C.prompt(f"Cor [{atual.get_cor()}]: ")).strip() or atual.get_cor()
-            if View.Categoria_Atualizar(id_, nome, cor):
-                print(C.sucesso("Categoria atualizada."))
-            else:
-                print(C.erro("Falhou."))
+            nome = input(f"Nome [{atual.get_nome()}]: ").strip() or atual.get_nome()
+            cor = input(f"Cor [{atual.get_cor()}]: ").strip() or atual.get_cor()
+            print("Categoria atualizada." if View.Categoria_Atualizar(id_, nome, cor) else "Falhou.")
         except Exception as e:
-            print(C.erro(f"Erro ao atualizar categoria: {e}"))
+            print(f"Erro ao atualizar categoria: {e}")
 
     @staticmethod
     def Categoria_Excluir():
         try:
             id_ = UI.Ler_Int("Id da categoria para excluir: ")
-            if View.Categoria_Excluir(id_):
-                print(C.sucesso("Categoria excluida."))
-            else:
-                print(C.erro("Categoria nao encontrada."))
+            print("Categoria excluida." if View.Categoria_Excluir(id_) else "Categoria nao encontrada.")
         except Exception as e:
-            print(C.erro(f"Erro ao excluir categoria: {e}"))
+            print(f"Erro ao excluir categoria: {e}")
 
     @staticmethod
     def Categoria_Pesquisar():
-        resultado = View.Categoria_Pesquisar_Nome(input(C.prompt("Parte do nome: ")))
+        resultado = View.Categoria_Pesquisar_Nome(input("Parte do nome: "))
         if not resultado:
-            print(C.info("Nada encontrado."))
+            print("Nada encontrado.")
             return
-        UI._listar(resultado)
+        for c in resultado:
+            print(c)
+
+    # ==================================================================
+    # SPRINT  (somente ADMIN)
+    # ==================================================================
+    @staticmethod
+    def Menu_Sprint():
+        while True:
+            print("\n=== MENU SPRINT ===")
+            print("1 - Listar   2 - Inserir   3 - Atualizar   4 - Excluir")
+            print("5 - Listar por projeto   0 - Voltar")
+            op = UI.Ler_Opcao()
+            if op == 0:
+                break
+            elif op == 1:
+                UI.Sprint_Listar()
+            elif op == 2:
+                UI.Sprint_Inserir()
+            elif op == 3:
+                UI.Sprint_Atualizar()
+            elif op == 4:
+                UI.Sprint_Excluir()
+            elif op == 5:
+                UI.Sprint_Por_Projeto()
+            else:
+                print("Opcao invalida.")
+
+    @staticmethod
+    def Sprint_Listar():
+        lista = View.Sprint_Listar()
+        if not lista:
+            print("Nenhuma sprint cadastrada.")
+            return
+        for s in lista:
+            print(s)
+
+    @staticmethod
+    def Sprint_Inserir():
+        try:
+            nome = input("Nome: ")
+            objetivo = input("Objetivo: ")
+            data_inicio = input("Inicio (AAAA-MM-DD): ")
+            data_fim = input("Fim (AAAA-MM-DD): ")
+            print("-- Projetos disponiveis --")
+            UI.Projeto_Listar()
+            projeto_id = UI.Ler_Int("Id do projeto: ", 0)
+            s = View.Sprint_Inserir(nome, objetivo, data_inicio, data_fim, projeto_id)
+            print(f"Sprint inserida (id={s.get_id()}).")
+        except Exception as e:
+            print(f"Erro ao inserir sprint: {e}")
+
+    @staticmethod
+    def Sprint_Atualizar():
+        try:
+            id_ = UI.Ler_Int("Id da sprint para atualizar: ")
+            atual = View.Sprint_Listar_Id(id_)
+            if atual is None:
+                print("Sprint nao encontrada.")
+                return
+            nome = input(f"Nome [{atual.get_nome()}]: ").strip() or atual.get_nome()
+            objetivo = input(f"Objetivo [{atual.get_objetivo()}]: ").strip() or atual.get_objetivo()
+            inicio = input(f"Inicio [{atual.get_data_inicio()}]: ").strip() or atual.get_data_inicio()
+            fim = input(f"Fim [{atual.get_data_fim()}]: ").strip() or atual.get_data_fim()
+            print("Sprint atualizada." if View.Sprint_Atualizar(id_, nome, objetivo, inicio, fim) else "Falhou.")
+        except Exception as e:
+            print(f"Erro ao atualizar sprint: {e}")
+
+    @staticmethod
+    def Sprint_Excluir():
+        try:
+            id_ = UI.Ler_Int("Id da sprint para excluir: ")
+            print("Sprint excluida." if View.Sprint_Excluir(id_) else "Sprint nao encontrada.")
+        except Exception as e:
+            print(f"Erro ao excluir sprint: {e}")
+
+    @staticmethod
+    def Sprint_Por_Projeto():
+        projeto_id = UI.Ler_Int("Id do projeto: ")
+        resultado = View.Sprint_Listar_Por_Projeto(projeto_id)
+        if not resultado:
+            print("Nenhuma sprint para esse projeto.")
+            return
+        for s in resultado:
+            print(s)
 
     # ==================================================================
     # TAREFA  (ADMIN e MEMBRO)
@@ -516,11 +604,10 @@ class UI:
     @staticmethod
     def Menu_Tarefa():
         while True:
-            print(C.menu_titulo("MENU TAREFA"))
-            print(C.opcoes((1, "Listar"), (2, "Inserir"), (3, "Atualizar"), (4, "Excluir")))
-            print(C.opcoes((5, "Pesquisar por titulo"), (6, "Listar por projeto")))
-            print(C.opcao(7, "Concluir tarefa (regra de negocio)"))
-            print(C.opcao_sair("Voltar"))
+            print("\n=== MENU TAREFA ===")
+            print("1 - Listar   2 - Inserir   3 - Atualizar   4 - Excluir")
+            print("5 - Pesquisar por titulo   6 - Listar por projeto")
+            print("7 - Concluir tarefa (regra de negocio)   0 - Voltar")
             op = UI.Ler_Opcao()
             if op == 0:
                 break
@@ -539,38 +626,40 @@ class UI:
             elif op == 7:
                 UI.Tarefa_Concluir()
             else:
-                print(C.erro("Opcao invalida."))
+                print("Opcao invalida.")
 
     @staticmethod
     def Tarefa_Listar():
         lista = View.Tarefa_Listar()
         if not lista:
-            print(C.info("Nenhuma tarefa cadastrada."))
+            print("Nenhuma tarefa cadastrada.")
             return
-        UI._listar(lista)
+        for t in lista:
+            print(t)
 
     @staticmethod
     def Tarefa_Inserir():
         try:
-            titulo = input(C.prompt("Titulo: "))
-            descricao = input(C.prompt("Descricao: "))
+            titulo = input("Titulo: ")
+            descricao = input("Descricao: ")
             status = UI.Ler_Enum("Status", StatusTarefa, StatusTarefa.A_FAZER)
             prioridade = UI.Ler_Enum("Prioridade", Prioridade, Prioridade.MEDIA)
-            prazo = input(C.prompt("Prazo (AAAA-MM-DD): "))
-            print(C.secao("Projetos disponiveis"))
-            UI.Projeto_Listar()
-            projeto_id = UI.Ler_Int("Id do projeto: ", 0)
-            print(C.secao("Usuarios disponiveis"))
+            prazo = input("Prazo (AAAA-MM-DD): ")
+            print("-- Sprints disponiveis --")
+            for s in View.Sprint_Listar():
+                print(f"   {s}")
+            sprint_id = UI.Ler_Int("Id da sprint: ", 0)
+            print("-- Usuarios disponiveis --")
             UI.Usuario_Listar()
             responsavel_id = UI.Ler_Int("Id do responsavel: ", 0)
-            print(C.secao("Categorias disponiveis"))
+            print("-- Categorias disponiveis --")
             UI.Categoria_Listar()
             categoria_id = UI.Ler_Int("Id da categoria: ", 0)
             t = View.Tarefa_Inserir(titulo, descricao, status, prioridade, prazo,
-                                    projeto_id, responsavel_id, categoria_id)
-            print(C.sucesso(f"Tarefa inserida (id={t.get_id()})."))
+                                    sprint_id, responsavel_id, categoria_id)
+            print(f"Tarefa inserida (id={t.get_id()}).")
         except Exception as e:
-            print(C.erro(f"Erro ao inserir tarefa: {e}"))
+            print(f"Erro ao inserir tarefa: {e}")
 
     @staticmethod
     def Tarefa_Atualizar():
@@ -578,45 +667,44 @@ class UI:
             id_ = UI.Ler_Int("Id da tarefa para atualizar: ")
             atual = View.Tarefa_Listar_Id(id_)
             if atual is None:
-                print(C.erro("Tarefa nao encontrada."))
+                print("Tarefa nao encontrada.")
                 return
-            titulo = input(C.prompt(f"Titulo [{atual.get_titulo()}]: ")).strip() or atual.get_titulo()
-            descricao = input(C.prompt(f"Descricao [{atual.get_descricao()}]: ")).strip() or atual.get_descricao()
+            titulo = input(f"Titulo [{atual.get_titulo()}]: ").strip() or atual.get_titulo()
+            descricao = input(f"Descricao [{atual.get_descricao()}]: ").strip() or atual.get_descricao()
             status = UI.Ler_Enum("Status", StatusTarefa, atual.get_status())
             prioridade = UI.Ler_Enum("Prioridade", Prioridade, atual.get_prioridade())
             categoria_id = UI.Ler_Int(f"Id categoria [{atual.get_categoria_id()}]: ", atual.get_categoria_id())
             ok = View.Tarefa_Atualizar(id_, titulo, descricao, status, prioridade, categoria_id)
-            print(C.sucesso("Tarefa atualizada.") if ok else C.erro("Falhou."))
+            print("Tarefa atualizada." if ok else "Falhou.")
         except Exception as e:
-            print(C.erro(f"Erro ao atualizar tarefa: {e}"))
+            print(f"Erro ao atualizar tarefa: {e}")
 
     @staticmethod
     def Tarefa_Excluir():
         try:
             id_ = UI.Ler_Int("Id da tarefa para excluir: ")
-            if View.Tarefa_Excluir(id_):
-                print(C.sucesso("Tarefa excluida."))
-            else:
-                print(C.erro("Tarefa nao encontrada."))
+            print("Tarefa excluida." if View.Tarefa_Excluir(id_) else "Tarefa nao encontrada.")
         except Exception as e:
-            print(C.erro(f"Erro ao excluir tarefa: {e}"))
+            print(f"Erro ao excluir tarefa: {e}")
 
     @staticmethod
     def Tarefa_Pesquisar():
-        resultado = View.Tarefa_Pesquisar_Titulo(input(C.prompt("Parte do titulo: ")))
+        resultado = View.Tarefa_Pesquisar_Titulo(input("Parte do titulo: "))
         if not resultado:
-            print(C.info("Nada encontrado."))
+            print("Nada encontrado.")
             return
-        UI._listar(resultado)
+        for t in resultado:
+            print(t)
 
     @staticmethod
     def Tarefa_Por_Projeto():
         projeto_id = UI.Ler_Int("Id do projeto: ")
         resultado = View.Tarefa_Listar_Por_Projeto(projeto_id)
         if not resultado:
-            print(C.info("Nenhuma tarefa para esse projeto."))
+            print("Nenhuma tarefa para esse projeto.")
             return
-        UI._listar(resultado)
+        for t in resultado:
+            print(t)
 
     @staticmethod
     def Tarefa_Concluir():
@@ -624,16 +712,14 @@ class UI:
             id_ = UI.Ler_Int("Id da tarefa a concluir: ")
             resultado = View.Tarefa_Concluir(id_)
             if resultado is None:
-                print(C.erro("Tarefa nao encontrada."))
+                print("Tarefa nao encontrada.")
                 return
             tarefa, projeto = resultado
-            print(C.sucesso(f"Tarefa {tarefa.get_id()} concluida."))
+            print(f"Tarefa {tarefa.get_id()} concluida.")
             if projeto:
-                print(C.destaque(
-                    f"Todas as tarefas concluidas! Projeto '{projeto.get_nome()}' marcado como CONCLUIDO."
-                ))
+                print(f">> Todas as tarefas concluidas! Projeto '{projeto.get_nome()}' marcado como CONCLUIDO.")
         except Exception as e:
-            print(C.erro(f"Erro ao concluir tarefa: {e}"))
+            print(f"Erro ao concluir tarefa: {e}")
 
     # ==================================================================
     # COMENTARIO  (ADMIN e MEMBRO)
@@ -641,9 +727,9 @@ class UI:
     @staticmethod
     def Menu_Comentario():
         while True:
-            print(C.menu_titulo("MENU COMENTARIO"))
-            print(C.opcoes((1, "Listar por tarefa"), (2, "Inserir"), (3, "Excluir")))
-            print(C.opcao_sair("Voltar"))
+            print("\n=== MENU COMENTARIO ===")
+            print("1 - Listar por tarefa   2 - Inserir   3 - Atualizar")
+            print("4 - Excluir   0 - Voltar")
             op = UI.Ler_Opcao()
             if op == 0:
                 break
@@ -652,44 +738,55 @@ class UI:
             elif op == 2:
                 UI.Comentario_Inserir()
             elif op == 3:
+                UI.Comentario_Atualizar()
+            elif op == 4:
                 UI.Comentario_Excluir()
             else:
-                print(C.erro("Opcao invalida."))
+                print("Opcao invalida.")
 
     @staticmethod
     def Comentario_Por_Tarefa():
         tarefa_id = UI.Ler_Int("Id da tarefa: ")
         resultado = View.Comentario_Listar_Por_Tarefa(tarefa_id)
         if not resultado:
-            print(C.info("Nenhum comentario para essa tarefa."))
+            print("Nenhum comentario para essa tarefa.")
             return
         for c in resultado:
-            print(C.item(
-                f"[{c.get_id()}] {c.get_texto()}  (autor_id={c.get_autor_id()})"
-            ))
+            print(f"[{c.get_id()}] {c.get_texto()}  (autor_id={c.get_autor_id()})")
 
     @staticmethod
     def Comentario_Inserir():
         try:
-            print(C.secao("Tarefas disponiveis"))
+            print("-- Tarefas disponiveis --")
             UI.Tarefa_Listar()
             tarefa_id = UI.Ler_Int("Id da tarefa: ", 0)
-            texto = input(C.prompt("Comentario: "))
+            texto = input("Comentario: ")
+            # Associacao: o autor e o usuario logado
             c = View.Comentario_Inserir(texto, tarefa_id, UI.usuario_logado.get_id())
-            print(C.sucesso(f"Comentario inserido (id={c.get_id()})."))
+            print(f"Comentario inserido (id={c.get_id()}).")
         except Exception as e:
-            print(C.erro(f"Erro ao inserir comentario: {e}"))
+            print(f"Erro ao inserir comentario: {e}")
+
+    @staticmethod
+    def Comentario_Atualizar():
+        try:
+            id_ = UI.Ler_Int("Id do comentario para atualizar: ")
+            atual = View.Comentario_Listar_Id(id_)
+            if atual is None:
+                print("Comentario nao encontrado.")
+                return
+            texto = input(f"Texto [{atual.get_texto()}]: ").strip() or atual.get_texto()
+            print("Comentario atualizado." if View.Comentario_Atualizar(id_, texto) else "Falhou.")
+        except Exception as e:
+            print(f"Erro ao atualizar comentario: {e}")
 
     @staticmethod
     def Comentario_Excluir():
         try:
             id_ = UI.Ler_Int("Id do comentario para excluir: ")
-            if View.Comentario_Excluir(id_):
-                print(C.sucesso("Comentario excluido."))
-            else:
-                print(C.erro("Comentario nao encontrado."))
+            print("Comentario excluido." if View.Comentario_Excluir(id_) else "Comentario nao encontrado.")
         except Exception as e:
-            print(C.erro(f"Erro ao excluir comentario: {e}"))
+            print(f"Erro ao excluir comentario: {e}")
 
     # ==================================================================
     # EVENTO  (ADMIN e MEMBRO)
@@ -697,10 +794,9 @@ class UI:
     @staticmethod
     def Menu_Evento():
         while True:
-            print(C.menu_titulo("MENU EVENTO (CALENDARIO)"))
-            print(C.opcoes((1, "Listar meus eventos"), (2, "Inserir"), (3, "Atualizar")))
-            print(C.opcoes((4, "Excluir"), (5, "Pesquisar por titulo")))
-            print(C.opcao_sair("Voltar"))
+            print("\n=== MENU EVENTO (CALENDARIO) ===")
+            print("1 - Listar meus eventos   2 - Inserir   3 - Atualizar")
+            print("4 - Excluir   5 - Pesquisar por titulo   0 - Voltar")
             op = UI.Ler_Opcao()
             if op == 0:
                 break
@@ -715,30 +811,30 @@ class UI:
             elif op == 5:
                 UI.Evento_Pesquisar()
             else:
-                print(C.erro("Opcao invalida."))
+                print("Opcao invalida.")
 
     @staticmethod
     def Evento_Meus():
         resultado = View.Evento_Listar_Por_Usuario(UI.usuario_logado.get_id())
         if not resultado:
-            print(C.info("Voce nao tem eventos."))
+            print("Voce nao tem eventos.")
             return
         for e in resultado:
-            print(C.item(f"{e}  {e.get_data_inicio()} -> {e.get_data_fim()}"))
+            print(f"{e}  {e.get_data_inicio()} -> {e.get_data_fim()}")
 
     @staticmethod
     def Evento_Inserir():
         try:
-            titulo = input(C.prompt("Titulo: "))
-            descricao = input(C.prompt("Descricao: "))
-            data_inicio = input(C.prompt("Inicio (AAAA-MM-DDTHH:MM): "))
-            data_fim = input(C.prompt("Fim (AAAA-MM-DDTHH:MM): "))
+            titulo = input("Titulo: ")
+            descricao = input("Descricao: ")
+            data_inicio = input("Inicio (AAAA-MM-DDTHH:MM): ")
+            data_fim = input("Fim (AAAA-MM-DDTHH:MM): ")
             tarefa_id = UI.Ler_Int("Id da tarefa vinculada (0 = nenhuma): ", 0)
             e = View.Evento_Inserir(titulo, descricao, data_inicio, data_fim,
                                     UI.usuario_logado.get_id(), tarefa_id)
-            print(C.sucesso(f"Evento inserido (id={e.get_id()})."))
+            print(f"Evento inserido (id={e.get_id()}).")
         except Exception as ex:
-            print(C.erro(f"Erro ao inserir evento: {ex}"))
+            print(f"Erro ao inserir evento: {ex}")
 
     @staticmethod
     def Evento_Atualizar():
@@ -746,36 +842,31 @@ class UI:
             id_ = UI.Ler_Int("Id do evento para atualizar: ")
             ev = View.Evento_Listar_Id(id_)
             if ev is None:
-                print(C.erro("Evento nao encontrado."))
+                print("Evento nao encontrado.")
                 return
-            titulo = input(C.prompt(f"Titulo [{ev.get_titulo()}]: ")).strip() or ev.get_titulo()
-            inicio = input(C.prompt(f"Inicio [{ev.get_data_inicio()}]: ")).strip() or ev.get_data_inicio()
-            fim = input(C.prompt(f"Fim [{ev.get_data_fim()}]: ")).strip() or ev.get_data_fim()
-            if View.Evento_Atualizar(id_, titulo, inicio, fim):
-                print(C.sucesso("Evento atualizado."))
-            else:
-                print(C.erro("Falhou."))
+            titulo = input(f"Titulo [{ev.get_titulo()}]: ").strip() or ev.get_titulo()
+            inicio = input(f"Inicio [{ev.get_data_inicio()}]: ").strip() or ev.get_data_inicio()
+            fim = input(f"Fim [{ev.get_data_fim()}]: ").strip() or ev.get_data_fim()
+            print("Evento atualizado." if View.Evento_Atualizar(id_, titulo, inicio, fim) else "Falhou.")
         except Exception as ex:
-            print(C.erro(f"Erro ao atualizar evento: {ex}"))
+            print(f"Erro ao atualizar evento: {ex}")
 
     @staticmethod
     def Evento_Excluir():
         try:
             id_ = UI.Ler_Int("Id do evento para excluir: ")
-            if View.Evento_Excluir(id_):
-                print(C.sucesso("Evento excluido."))
-            else:
-                print(C.erro("Evento nao encontrado."))
+            print("Evento excluido." if View.Evento_Excluir(id_) else "Evento nao encontrado.")
         except Exception as ex:
-            print(C.erro(f"Erro ao excluir evento: {ex}"))
+            print(f"Erro ao excluir evento: {ex}")
 
     @staticmethod
     def Evento_Pesquisar():
-        resultado = View.Evento_Pesquisar_Titulo(input(C.prompt("Parte do titulo: ")))
+        resultado = View.Evento_Pesquisar_Titulo(input("Parte do titulo: "))
         if not resultado:
-            print(C.info("Nada encontrado."))
+            print("Nada encontrado.")
             return
-        UI._listar(resultado)
+        for e in resultado:
+            print(e)
 
 
 if __name__ == "__main__":

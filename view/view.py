@@ -8,6 +8,7 @@ A UI nao acessa DAO nem modelo diretamente — so chama metodos da View.
 from usuarios.usuario import Usuario, UsuarioDAO, Perfil
 from equipes.equipe import Equipe, EquipeDAO
 from projetos.projeto import Projeto, ProjetoDAO, StatusProjeto
+from sprints.sprint import Sprint, SprintDAO
 from categorias.categoria import Categoria, CategoriaDAO
 from tarefas.tarefa import Tarefa, TarefaDAO, StatusTarefa, Prioridade
 from comentarios.comentario import Comentario, ComentarioDAO
@@ -110,6 +111,29 @@ class View:
     def Equipe_Pesquisar_Nome(termo):
         return EquipeDAO.Pesquisar_Por_Nome(termo)
 
+    @staticmethod
+    def Equipe_Membros(equipe_id):
+        """Usuarios que sao membros da equipe."""
+        return UsuarioDAO.Listar_Por_Equipe(equipe_id)
+
+    @staticmethod
+    def Equipe_Adicionar_Membro(equipe_id, usuario_id):
+        """Adiciona um usuario como membro da equipe (define seu equipe_id)."""
+        u = UsuarioDAO.Listar_Id(usuario_id)
+        if u is None:
+            return False
+        u.set_equipe_id(equipe_id)
+        return UsuarioDAO.Atualizar(u)
+
+    @staticmethod
+    def Equipe_Remover_Membro(usuario_id):
+        """Remove o usuario da sua equipe atual (equipe_id = 0)."""
+        u = UsuarioDAO.Listar_Id(usuario_id)
+        if u is None:
+            return False
+        u.set_equipe_id(0)
+        return UsuarioDAO.Atualizar(u)
+
     # ==================================================================
     # PROJETO
     # ==================================================================
@@ -150,6 +174,59 @@ class View:
     @staticmethod
     def Projeto_Listar_Por_Equipe(equipe_id):
         return ProjetoDAO.Listar_Por_Equipe(equipe_id)
+
+    @staticmethod
+    def Projeto_Membros(projeto_id):
+        """Membros do projeto = membros da equipe dona do projeto."""
+        p = ProjetoDAO.Listar_Id(projeto_id)
+        if p is None:
+            return []
+        return UsuarioDAO.Listar_Por_Equipe(p.get_equipe_id())
+
+    @staticmethod
+    def Projeto_Progresso(projeto_id):
+        """Retorna (feitas, total) das tarefas do projeto (via suas sprints)."""
+        tarefas = View.Tarefa_Listar_Por_Projeto(projeto_id)
+        total = len(tarefas)
+        feitas = sum(1 for t in tarefas if t.get_status() == StatusTarefa.CONCLUIDA)
+        return feitas, total
+
+    # ==================================================================
+    # SPRINT
+    # ==================================================================
+    @staticmethod
+    def Sprint_Listar():
+        return SprintDAO.Listar()
+
+    @staticmethod
+    def Sprint_Listar_Id(id):
+        return SprintDAO.Listar_Id(id)
+
+    @staticmethod
+    def Sprint_Listar_Por_Projeto(projeto_id):
+        return SprintDAO.Listar_Por_Projeto(projeto_id)
+
+    @staticmethod
+    def Sprint_Inserir(nome, objetivo, data_inicio, data_fim, projeto_id):
+        s = Sprint(objetivo=objetivo, data_inicio=data_inicio,
+                   data_fim=data_fim, projeto_id=projeto_id)
+        s.set_nome(nome)
+        return SprintDAO.Inserir(s)
+
+    @staticmethod
+    def Sprint_Atualizar(id, nome, objetivo, data_inicio, data_fim):
+        s = SprintDAO.Listar_Id(id)
+        if s is None:
+            return False
+        s.set_nome(nome)
+        s.set_objetivo(objetivo)
+        s.set_data_inicio(data_inicio)
+        s.set_data_fim(data_fim)
+        return SprintDAO.Atualizar(s)
+
+    @staticmethod
+    def Sprint_Excluir(id):
+        return SprintDAO.Excluir(id)
 
     # ==================================================================
     # CATEGORIA
@@ -198,9 +275,9 @@ class View:
 
     @staticmethod
     def Tarefa_Inserir(titulo, descricao, status, prioridade, prazo,
-                       projeto_id, responsavel_id, categoria_id):
+                       sprint_id, responsavel_id, categoria_id):
         t = Tarefa(descricao=descricao, status=status, prioridade=prioridade,
-                   prazo=prazo, projeto_id=projeto_id,
+                   prazo=prazo, sprint_id=sprint_id,
                    responsavel_id=responsavel_id, categoria_id=categoria_id)
         t.set_titulo(titulo)
         return TarefaDAO.Inserir(t)
@@ -226,8 +303,16 @@ class View:
         return TarefaDAO.Pesquisar_Por_Titulo(termo)
 
     @staticmethod
+    def Tarefa_Listar_Por_Sprint(sprint_id):
+        return TarefaDAO.Listar_Por_Sprint(sprint_id)
+
+    @staticmethod
     def Tarefa_Listar_Por_Projeto(projeto_id):
-        return TarefaDAO.Listar_Por_Projeto(projeto_id)
+        """Todas as tarefas do projeto, percorrendo as sprints dele."""
+        tarefas = []
+        for s in SprintDAO.Listar_Por_Projeto(projeto_id):
+            tarefas.extend(TarefaDAO.Listar_Por_Sprint(s.get_id()))
+        return tarefas
 
     @staticmethod
     def Tarefa_Concluir(tarefa_id):
@@ -245,14 +330,19 @@ class View:
         tarefa.concluir()
         TarefaDAO.Atualizar(tarefa)
 
+        # Sprint -> Projeto: se todas as tarefas do projeto (em todas as
+        # sprints) estiverem concluidas, o projeto vira CONCLUIDO.
         projeto_concluido = None
-        tarefas = TarefaDAO.Listar_Por_Projeto(tarefa.get_projeto_id())
-        if tarefas and all(t.get_status() == StatusTarefa.CONCLUIDA for t in tarefas):
-            projeto = ProjetoDAO.Listar_Id(tarefa.get_projeto_id())
-            if projeto:
-                projeto.set_status(StatusProjeto.CONCLUIDO)
-                ProjetoDAO.Atualizar(projeto)
-                projeto_concluido = projeto
+        sprint = SprintDAO.Listar_Id(tarefa.get_sprint_id())
+        if sprint:
+            projeto_id = sprint.get_projeto_id()
+            tarefas = View.Tarefa_Listar_Por_Projeto(projeto_id)
+            if tarefas and all(t.get_status() == StatusTarefa.CONCLUIDA for t in tarefas):
+                projeto = ProjetoDAO.Listar_Id(projeto_id)
+                if projeto:
+                    projeto.set_status(StatusProjeto.CONCLUIDO)
+                    ProjetoDAO.Atualizar(projeto)
+                    projeto_concluido = projeto
         return tarefa, projeto_concluido
 
     # ==================================================================
@@ -263,10 +353,22 @@ class View:
         return ComentarioDAO.Listar_Por_Tarefa(tarefa_id)
 
     @staticmethod
+    def Comentario_Listar_Id(id):
+        return ComentarioDAO.Listar_Id(id)
+
+    @staticmethod
     def Comentario_Inserir(texto, tarefa_id, autor_id):
         c = Comentario(tarefa_id=tarefa_id, autor_id=autor_id)
         c.set_texto(texto)
         return ComentarioDAO.Inserir(c)
+
+    @staticmethod
+    def Comentario_Atualizar(id, texto):
+        c = ComentarioDAO.Listar_Id(id)
+        if c is None:
+            return False
+        c.set_texto(texto)
+        return ComentarioDAO.Atualizar(c)
 
     @staticmethod
     def Comentario_Excluir(id):

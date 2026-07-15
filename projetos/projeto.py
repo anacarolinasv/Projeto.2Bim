@@ -1,5 +1,3 @@
-"""Entidade Projeto (modelo) e ProjetoDAO (persistencia)."""
-
 import json
 import os
 from enum import Enum
@@ -12,10 +10,6 @@ class StatusProjeto(Enum):
     CONCLUIDO = "CONCLUIDO"
     ARQUIVADO = "ARQUIVADO"
 
-
-# ======================================================================
-# MODELO
-# ======================================================================
 class Projeto:
     """Projeto. Relacionamento 1 -> N: possui varias Tarefas.
     Associacao N -> 1: pertence a uma Equipe (equipe_id)."""

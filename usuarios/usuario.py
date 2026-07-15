@@ -1,5 +1,3 @@
-"""Entidade Usuario (modelo) e UsuarioDAO (persistencia)."""
-
 import json
 import os
 from enum import Enum
@@ -11,23 +9,15 @@ class Perfil(Enum):
     ADMIN = "ADMIN"
     MEMBRO = "MEMBRO"
 
-
-# ======================================================================
-# MODELO
-# ======================================================================
 class Usuario:
-    """Usuario do sistema (controle de acesso).
-
-    Relacionamentos 1 -> N: e responsavel por Tarefas, autor de
-    Comentarios e dono de Eventos.
-    """
-
-    def __init__(self, id=0, nome="", email="", senha="", perfil=Perfil.MEMBRO):
+    def __init__(self, id=0, nome="", email="", senha="", perfil=Perfil.MEMBRO,
+                 equipe_id=0):
         self._id = id
         self._nome = nome
         self._email = email
         self._senha = senha
         self._perfil = perfil
+        self._equipe_id = equipe_id
 
     def get_id(self):
         return self._id
@@ -65,6 +55,12 @@ class Usuario:
     def set_perfil(self, valor):
         self._perfil = valor
 
+    def get_equipe_id(self):
+        return self._equipe_id
+
+    def set_equipe_id(self, valor):
+        self._equipe_id = valor
+
     def eh_admin(self):
         return self._perfil == Perfil.ADMIN
 
@@ -75,13 +71,14 @@ class Usuario:
             "email": self._email,
             "senha": self._senha,
             "perfil": self._perfil.value,
+            "equipe_id": self._equipe_id,
         }
 
     @staticmethod
     def from_json(dic):
         return Usuario(
             dic["id"], dic["nome"], dic["email"], dic["senha"],
-            Perfil(dic["perfil"]),
+            Perfil(dic["perfil"]), dic.get("equipe_id", 0),
         )
 
     def __str__(self):
@@ -166,3 +163,8 @@ class UsuarioDAO:
     def Pesquisar_Por_Nome(termo):
         termo = termo.lower()
         return [o for o in UsuarioDAO.Listar() if termo in o.get_nome().lower()]
+
+    @staticmethod
+    def Listar_Por_Equipe(equipe_id):
+        """Associacao 1->N: usuarios (membros) de uma equipe."""
+        return [o for o in UsuarioDAO.Listar() if o.get_equipe_id() == equipe_id]
